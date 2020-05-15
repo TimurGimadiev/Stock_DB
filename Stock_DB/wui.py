@@ -37,7 +37,7 @@ from collections import Counter
 MoleculeContainer._render_config['mapping'] = False
 color_map = ['rgb(0,104,55)', 'rgb(26,152,80)', 'rgb(102,189,99)', 'rgb(166,217,106)', 'rgb(217,239,139)',
              'rgb(254,224,139)']
-db = load_schema('reactions', password='afirdb', port=5432, host='localhost.', user='postgres')
+db = load_schema('reactions', password='afirdb', port=5432, host='localhost', user='postgres')
 
 def svg2html(svg):
     return 'data:image/svg+xml;base64,' + encodebytes(svg.encode()).decode().replace('\n', '')
@@ -141,6 +141,8 @@ def search(row_id, button, confirm, data, mrv, cols2, rows2, mrv_cur):
         ctx = callback_context
         element_id = ctx.triggered[0]['prop_id'].split('.')[0]
         if row_id and element_id == 'table':
+            if 'id' not in data[row_id[0]]:
+                return table, mrv
             id = data[row_id[0]]['id']
             with db_session:
                 table = []
@@ -148,6 +150,7 @@ def search(row_id, button, confirm, data, mrv, cols2, rows2, mrv_cur):
                     table.append(c.data)
                     table[-1]['id'] = c.id
                 s = Molecule[id].structure
+                s.clean2d()
             with StringIO() as f:
                 with MRVWrite(f) as o:
                     o.write(s)
@@ -160,7 +163,6 @@ def search(row_id, button, confirm, data, mrv, cols2, rows2, mrv_cur):
             mrv = mrv_cur
 
         elif confirm and element_id == 'confirm':
-            #print(all((x for x in rows2 for y, x in x.items() if y != 'id')))
             table = rows2
             mrv = mrv_cur
             #print(rows2)
@@ -202,6 +204,6 @@ def display_confirm(value):
 @dash.server.before_request
 def db_config():
     db.cgr_db_config()
-dash.run_server(port=8008, host="0.0.0.0", debug=True)
+dash.run_server(port=8008, host="0.0.0.0", debug=False)
 
 __all__ = ['dash']
