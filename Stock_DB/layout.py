@@ -1,5 +1,6 @@
 from dash_core_components import Input, RadioItems, ConfirmDialog
-from dash_html_components import Div, H1, Hr, H2, Button, Br
+from dash_html_components import Div, H1, Hr, H2, Button, Br, Img
+from dash_bootstrap_components import Table
 from dash_marvinjs import DashMarvinJS
 from dash_table import DataTable
 
@@ -68,7 +69,7 @@ def get_layout(app):
                     DashMarvinJS(id='editor', marvin_url=app.get_asset_url('mjs/editor.html'), marvin_width='100%')
             ], className='col-6'),
                 Div([
-                    DataTable(id='table', columns=fields1,
+                    Table(id='table', columns=fields1,
                               fixed_rows={'headers': True, 'data': 0},
                               row_selectable='single',
                               style_data={
