@@ -1,6 +1,6 @@
 from dash_core_components import Input, RadioItems, ConfirmDialog
 from dash_html_components import Div, H1, Hr, H2, Button, Br, Img
-from dash_bootstrap_components import Table
+#from dash_bootstrap_components import Table
 from dash_marvinjs import DashMarvinJS
 from dash_table import DataTable
 
@@ -9,7 +9,8 @@ readme = '''
 - Help will be shown here
 '''
 fields1 = [
-        {'name': 'Brutto formula', 'id': 'Brutto formula'},
+        {'name': 'Structure', 'id': 'Picture', 'presentation': 'markdown'},
+        {'name': 'Empirical formula', 'id': 'Brutto formula'},
         {'name': 'Chemical name', 'id': 'Chemical name'},
         {'name': 'CAS No.', 'id': 'CAS No.'}]
 
@@ -68,18 +69,30 @@ def get_layout(app):
                      ),
                     DashMarvinJS(id='editor', marvin_url=app.get_asset_url('mjs/editor.html'), marvin_width='100%')
             ], className='col-6'),
-                Div([
-                    Table(id='table', columns=fields1,
+                Div([H2("Search results", style={'textAlign': 'left'}),
+                    DataTable(id='table', columns=fields1,
                               fixed_rows={'headers': True, 'data': 0},
                               row_selectable='single',
                               style_data={
                                   'whiteSpace': 'normal',
-                                  'height': 'auto'},
+                                  'height': 'auto','width':'auto' },
                               style_table={ 'overflowY': 'hidden', 'overflowX': 'hidden',
                                            'margin-left': '0px'},
-                              style_cell={'textAlign': 'left', 'padding': '20px', 'padding-left': '20px',
-                                          'height': 'auto','width':'auto', 'whiteSpace': 'normal'},
+                              style_cell={'textAlign': 'left', 'padding': '5px', 'height': 'auto',
+                                          'padding-left': '17px',
+                                          'whiteSpace': 'normal',
+                                          'minWidth': '10px', 'maxWidth': '150px'},
                               style_as_list_view=True,
+                              style_cell_conditional=[
+                                {'if': {'column_id': 'Picture'},
+                                   'width': '60%'},
+                                {'if': {'column_id': 'Brutto formula'},
+                                   'width': '10%'},
+                                {'if': {'column_id': 'Chemical name'},
+                                   'width': '15%'},
+                                {'if': {'column_id': 'CAS No.'},
+                                   'width': '10%'},
+                               ],
                               )
                 ], className='col-6')
             ], className='row')

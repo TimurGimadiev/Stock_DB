@@ -30,6 +30,7 @@ from CGRdb import Molecule, load_schema
 from CGRdbData import MoleculeProperties
 from pony.orm import db_session, select
 from collections import Counter
+from flask import make_response
 
 
 
@@ -46,10 +47,21 @@ def brutto(mol):
     return ''.join(f'{a}{n}' for a, n in
                  sorted(Counter(a.atomic_symbol for _, a in mol.atoms()).items()))
 
-dash = Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
+dash = Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts,
+            assets_folder='assets')
 dash.title = 'Stock_DB'
 dash.layout = get_layout(dash)
 dash.server.secret_key = getenv('SECRET_KEY', 'development')
+
+
+@dash.server.route('/pictures/<name_id>')
+def get_picture(name_id):
+    with db_session:
+        r = Molecule[int(name_id)].structure
+        r.clean2d()
+        resp = make_response(r.depict())
+        resp.headers['Content-Type'] = 'image/svg+xml'
+    return resp
 
 @dash.callback([Output('table', 'data'), Output('table', 'selected_rows')],
                [Input('editor', 'download'),Input('button', 'n_clicks')],
@@ -120,14 +132,18 @@ def search(mrv, button, radio1, radio2, radio3, input1):
                         m = m.molecules()
     with db_session:
         if m is None or not m:
-            found = [dict([(i['name'], 'No results') for i in fields1])]
+
+            found = [dict([(i['name'], 'No results') if i['name'] != 'Picture' else (i['name'], '![s](assets/test.svg)') for i in fields1 if i['name']])]
+            print(found)
+            #found['pict'] = ''
         else:
-            for h in m:
+            for n, h in enumerate(m):
+                pict = '![s](/pictures/'+str(h.id)+')'
                 entities = list(Molecule[h.id].metadata.data)
                 cas = '; '.join(set([x['CAS No.'] for x in entities]))
                 names = '; '.join(set([x['Chemical name'] for x in entities]))
                 br_formula = brutto(h.structure)
-                found.append(dict([(i['name'], j) for i, j in zip(fields1, [br_formula, names, cas])]))
+                found.append(dict([(i['name'], j) for i, j in zip(fields1, [pict, br_formula, names, cas])]))
                 found[-1]['id'] = h.id
     row = []
     return found, row
@@ -204,6 +220,6 @@ def display_confirm(value):
 @dash.server.before_request
 def db_config():
     db.cgr_db_config()
-dash.run_server(port=8008, host="0.0.0.0", debug=False)
+dash.run_server(port=8008, host="0.0.0.0", debug=True)
 
 __all__ = ['dash']
