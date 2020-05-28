@@ -2,7 +2,7 @@
 #
 #  Copyright 2020 Ramil Nugmanov <nougmanoff@protonmail.com>
 #  Copyright 2020 Timur Gimadiev <timur.gimadiev@gmail.com>
-#  This file is part of AFIRdb.
+#  This file is part of Warehouse DB.
 #
 #  AFIRdb is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU Lesser General Public License as published by
@@ -20,7 +20,6 @@
 from base64 import encodebytes
 from CGRtools import MoleculeContainer, MRVRead, MRVWrite
 from dash import Dash, callback_context
-from dash_html_components import Img
 from dash.dependencies import Input, Output, State
 from io import StringIO, BytesIO
 from os import getenv
@@ -31,6 +30,7 @@ from CGRdbData import MoleculeProperties
 from pony.orm import db_session, select
 from collections import Counter
 from flask import make_response
+from utilities import parse_contents
 
 
 
@@ -54,14 +54,6 @@ dash.layout = get_layout(dash)
 dash.server.secret_key = getenv('SECRET_KEY', 'development')
 
 
-@dash.server.route('/pictures/<name_id>')
-def get_picture(name_id):
-    with db_session:
-        r = Molecule[int(name_id)].structure
-        r.clean2d()
-        resp = make_response(r.depict())
-        resp.headers['Content-Type'] = 'image/svg+xml'
-    return resp
 
 @dash.callback([Output('table', 'data'), Output('table', 'selected_rows')],
                [Input('editor', 'download'),Input('button', 'n_clicks')],
@@ -132,8 +124,7 @@ def search(mrv, button, radio1, radio2, radio3, input1):
                         m = m.molecules()
     with db_session:
         if m is None or not m:
-
-            found = [dict([(i['name'], 'No results') if i['name'] != 'Picture' else (i['name'], '![s](assets/test.svg)') for i in fields1 if i['name']])]
+            found = [dict([(i['id'], 'No results') if i['id'] != 'Structure' else (i['id'], '![s](assets/test.svg)') for i in fields1 if i['id']])]
             print(found)
             #found['pict'] = ''
         else:
@@ -143,7 +134,7 @@ def search(mrv, button, radio1, radio2, radio3, input1):
                 cas = '; '.join(set([x['CAS No.'] for x in entities]))
                 names = '; '.join(set([x['Chemical name'] for x in entities]))
                 br_formula = brutto(h.structure)
-                found.append(dict([(i['name'], j) for i, j in zip(fields1, [pict, br_formula, names, cas])]))
+                found.append(dict([(i['id'], j) for i, j in zip(fields1, [pict, br_formula, names, cas])]))
                 found[-1]['id'] = h.id
     row = []
     return found, row
@@ -153,7 +144,7 @@ def search(mrv, button, radio1, radio2, radio3, input1):
                [State('table', 'data'), State('editor', 'download'), State('table2', 'columns'),
                 State('table2', 'data'), State('editor', 'upload')])
 def search(row_id, button, confirm, data, mrv, cols2, rows2, mrv_cur):
-        table = [dict([(i["name"], 'No results') for i in fields2])]
+        table = [dict([(i["id"], 'No results') for i in fields2])]
         ctx = callback_context
         element_id = ctx.triggered[0]['prop_id'].split('.')[0]
         if row_id and element_id == 'table':
@@ -215,6 +206,26 @@ def display_confirm(value):
         return True
     return False
 
+
+@dash.callback(Output('output-data-upload', 'children'),
+              [Input('upload-data', 'contents')],
+              [State('upload-data', 'filename'),
+               State('upload-data', 'last_modified')])
+def update_output(content, name, date):
+    if content is not None:
+        children = [
+            parse_contents(content, name, date)]
+        return children
+
+@dash.server.route('/pictures/<name_id>')
+def get_picture(name_id):
+    if name_id is not None:
+        with db_session:
+            r = Molecule[int(name_id)].structure
+            r.clean2d()
+            resp = make_response(r.depict())
+            resp.headers['Content-Type'] = 'image/svg+xml'
+        return resp
 
 
 @dash.server.before_request

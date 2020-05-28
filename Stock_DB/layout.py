@@ -1,5 +1,23 @@
-from dash_core_components import Input, RadioItems, ConfirmDialog
-from dash_html_components import Div, H1, Hr, H2, Button, Br, Img
+# -*- coding: utf-8 -*-
+#
+#  Copyright 2020 Timur Gimadiev <timur.gimadiev@gmail.com>
+#  This file is part of Warehouse DB.
+#
+#  AFIRdb is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
+from dash_core_components import Input, RadioItems, ConfirmDialog, Upload, Loading
+from dash_html_components import Div, H1, Hr, H2, Button, Br, A
 #from dash_bootstrap_components import Table
 from dash_marvinjs import DashMarvinJS
 from dash_table import DataTable
@@ -9,7 +27,7 @@ readme = '''
 - Help will be shown here
 '''
 fields1 = [
-        {'name': 'Structure', 'id': 'Picture', 'presentation': 'markdown'},
+        {'name': 'Structure', 'id': 'Structure', 'presentation': 'markdown'},
         {'name': 'Empirical formula', 'id': 'Brutto formula'},
         {'name': 'Chemical name', 'id': 'Chemical name'},
         {'name': 'CAS No.', 'id': 'CAS No.'}]
@@ -28,6 +46,32 @@ fields2 = [
         {'name': 'Old', 'id': 'Old'}]
 
 def get_layout(app):
+    row_0 = Div([H2("Upload to Database (excel file)", style={'textAlign': 'left'}),
+    Upload(
+        id='upload-data',
+        children=Div([
+            'Drag and Drop or ',
+            A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        # Allow multiple files to be uploaded
+        multiple=False
+    ),
+        Loading(
+            id="loading",
+            children=[Div(id='output-data-upload')],
+            type="default",
+        ),
+    ])
     row_1 = Div([
                 Div([
                     H2("Text input", style={'textAlign': 'left'}),
@@ -124,6 +168,6 @@ def get_layout(app):
 
 
 
-    layout = Div([H1("Chemicals Storage", style={'textAlign': 'center'}),
+    layout = Div([H1("Chemicals Storage", style={'textAlign': 'center'}),row_0, Hr(),
                   row_1, Hr(), row_2, Hr(), row_3, Hr(), row_4])
     return layout
