@@ -1,3 +1,3 @@
 #!/bin/bash
 service postgresql start
-python3 wui.py
+python3 -m Stock_DB

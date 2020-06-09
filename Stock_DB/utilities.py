@@ -30,7 +30,7 @@ def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(',')
     decoded = b64decode(content_string)
     try:
-        if 'xls' in filename:
+        if '.xls' in filename:
             # Assume that the user uploaded an excel file
             return input_from_excel(BytesIO(decoded))
     except Exception as e:
@@ -74,6 +74,7 @@ def upload_properties(structure, properties):
 
 
 def input_from_excel(excel_file):
+    print("here")
     chemicals = pd.read_excel(excel_file)
     entries_good = []
     entries_bad = []

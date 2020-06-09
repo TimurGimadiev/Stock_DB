@@ -23,14 +23,14 @@ from dash import Dash, callback_context
 from dash.dependencies import Input, Output, State
 from io import StringIO, BytesIO
 from os import getenv
-from layout import get_layout, fields1, fields2
-from plugins import external_scripts, external_stylesheets
+from .layout import get_layout, fields1, fields2
+from .plugins import external_scripts, external_stylesheets
 from CGRdb import Molecule, load_schema
 from CGRdbData import MoleculeProperties
 from pony.orm import db_session, select
 from collections import Counter
 from flask import make_response
-from utilities import parse_contents
+from .utilities import parse_contents
 
 
 
@@ -38,7 +38,7 @@ from utilities import parse_contents
 MoleculeContainer._render_config['mapping'] = False
 color_map = ['rgb(0,104,55)', 'rgb(26,152,80)', 'rgb(102,189,99)', 'rgb(166,217,106)', 'rgb(217,239,139)',
              'rgb(254,224,139)']
-db = load_schema('reactions', password='afirdb', port=5432, host='localhost', user='postgres')
+db = load_schema('molecules', password='stock_db', port=5432, host='localhost', user='postgres')
 
 def svg2html(svg):
     return 'data:image/svg+xml;base64,' + encodebytes(svg.encode()).decode().replace('\n', '')
@@ -47,8 +47,7 @@ def brutto(mol):
     return ''.join(f'{a}{n}' for a, n in
                  sorted(Counter(a.atomic_symbol for _, a in mol.atoms()).items()))
 
-dash = Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts,
-            assets_folder='assets')
+dash = Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
 dash.title = 'Stock_DB'
 dash.layout = get_layout(dash)
 dash.server.secret_key = getenv('SECRET_KEY', 'development')
@@ -230,7 +229,9 @@ def get_picture(name_id):
 
 @dash.server.before_request
 def db_config():
-    db.cgr_db_config()
-dash.run_server(port=8008, host="0.0.0.0", debug=True)
+    db.cgrdb_init_session()
 
-__all__ = ['dash']
+def start(port=8008, host="0.0.0.0", debug=True):
+    dash.run_server(port=port, host=host, debug=debug)
+
+__all__ = ['dash', 'start']
