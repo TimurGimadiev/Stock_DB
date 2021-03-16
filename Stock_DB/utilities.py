@@ -18,13 +18,19 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from base64 import b64decode
-from CGRtools import SMILESRead
+from CGRtools import smiles
 from CGRdb import Molecule
 from CGRdbData import MoleculeProperties
 from dash_html_components import Div
 from io import StringIO, BytesIO
 import pandas as pd
-from pony.orm import db_session
+from pony.orm import db_session, select, PrimaryKey, Required
+
+
+req_fields = {"Chemical name", "Maker name", "CAS No.", "Quantity", "Quantity unit", "IASO Barcode No.",
+                  "Storage location (JP) hierarchy4", "Storage location (JP) hierarchy5", "Entry date", "Old"}
+valid_keys = ["Chemical name", "Maker", "CAS No.", "Quantity", "Quantity unit", "IASO Barcode No.",
+                  "Storage location (JP) hierarchy4", "Storage location (JP) hierarchy5", "Entry date", "Old"]
 
 def parse_contents(contents, filename, date):
     content_type, content_string = contents.split(',')
@@ -41,8 +47,7 @@ def parse_contents(contents, filename, date):
 
 
 def upload_properties(structure, properties):
-    valid_keys = ["Chemical name", "Maker", "CAS No.", "Quantity", "Quantity unit", "IASO Barcode No.",
-                  "Storage location (JP) hierarchy4", "Storage location (JP) hierarchy5", "Entry date", "Old"]
+
 
     for k in properties.keys():
         if k not in valid_keys:
@@ -76,6 +81,14 @@ def upload_properties(structure, properties):
 def input_from_excel(excel_file):
     print("here")
     chemicals = pd.read_excel(excel_file)
+
+    if len(set(chemicals.columns.values.tolist()).intersection(req_fields)) == 10:
+        pass
+    else:
+        return Div(['''Please check if your Excel file has all 10 required fields: Chemical name,
+                    Maker name, CAS No., Quantity, Quantity unit, IASO Barcode No.,
+                    Storage location (JP) hierarchy4, Storage location (JP) hierarchy5, Entry date, Old'''])
+
     entries_good = []
     entries_bad = []
     with db_session:
@@ -85,22 +98,22 @@ def input_from_excel(excel_file):
     for i, row in chemicals.iterrows():
         c = row["SMILES"]
         try:
-            a = next(SMILESRead(StringIO(c), ignore=True))
+            a = smiles(c)
             print(a)
             a.standardize()
             a.thiele()
             a.clean2d()
             entries_good.append({"structure": a,
-                                 "Chemical name": row["Chemical name"].strip(" "),
-                                 "Maker": row["Maker name"].strip(" "),
-                                 "CAS No.": row["CAS No."].strip(" "),
+                                 "Chemical name": row["Chemical name"].rstrip(" "),
+                                 "Maker": row["Maker name"].rstrip(" "),
+                                 "CAS No.": row["CAS No."].rstrip(" "),
                                  "Quantity": row["Quantity"],
-                                 "Quantity unit": row["Quantity unit"].strip(" "),
-                                 "IASO Barcode No.": row["IASO Barcode No."].strip(" "),
-                                 "Storage location (JP) hierarchy4": row["Storage location (JP) hierarchy4"].strip(" "),
-                                 "Storage location (JP) hierarchy5": row["Storage location (JP) hierarchy5"].strip(" "),
-                                 "Entry date": row["Entry date"].strip(" "),
-                                 "Old": row["Old"].strip(" ")})
+                                 "Quantity unit": row["Quantity unit"].rstrip(" "),
+                                 "IASO Barcode No.": row["IASO Barcode No."].rstrip(" "),
+                                 "Storage location (JP) hierarchy4": row["Storage location (JP) hierarchy4"].rstrip(" "),
+                                 "Storage location (JP) hierarchy5": row["Storage location (JP) hierarchy5"].rstrip(" "),
+                                 "Entry date": row["Entry date"].rstrip(" "),
+                                 "Old": row["Old"].rstrip(" ")})
         except:
             print("Some error in:", i, ",", c)
             entries_bad.append((i, c))
@@ -109,6 +122,28 @@ def input_from_excel(excel_file):
         upload_properties(structure=e["structure"], properties={x: e[x] for x in e if x not in ["structure"]})
     print("Uploaded to DB")
     return Div([
-            'There was {} entities, {} of them were not processed due to errors'.format(len(entries_good),
-                                                                                        len(entries_bad))
-            ])
+            '''There was {} entities, {} of them were not processed due to errors. 
+            Folowing row(s) have problems: {}'''.format(len(entries_good), len(entries_bad), [x+2 for x, _ in entries_bad])],
+            style={"maxHeight": "400px", "overflow": "scroll"})
+
+
+def write_excel():
+    res = pd.DataFrame(columns=req_fields)
+    with db_session:
+        for m in Molecule.select():
+            for e in list(m.metadata.data):
+                e.update({"SMILES": str(m.structure)})
+                tmp = pd.DataFrame.from_dict(e)
+                res = pd.concat([res, tmp], ignore_index=True)
+    output = BytesIO()
+    # Use the StringIO object as the filehandle.
+    writer = pd.ExcelWriter("tmp", engine='xlsxwriter')
+    writer.book.filename = output
+    res.to_excel(writer)
+    writer.save()
+    output.seek(0)
+    #xlsx_data = output.getvalue()
+    return output#xlsx_data
+
+
+

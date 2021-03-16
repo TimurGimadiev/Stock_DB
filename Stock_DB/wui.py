@@ -27,26 +27,35 @@ from .layout import get_layout, fields1, fields2
 from .plugins import external_scripts, external_stylesheets
 from CGRdb import Molecule, load_schema
 from CGRdbData import MoleculeProperties
-from pony.orm import db_session, select
+from pony.orm import db_session, select, PrimaryKey, Required
 from collections import Counter
-from flask import make_response
-from .utilities import parse_contents
+from flask import make_response, request, send_file
+from .utilities import parse_contents, write_excel
+from TimeStamp import ModificationStamp
+import time
 
-
+db = load_schema('molecules', password='stock_db', port=5432, host='localhost', user='postgres')
 
 
 MoleculeContainer._render_config['mapping'] = False
 color_map = ['rgb(0,104,55)', 'rgb(26,152,80)', 'rgb(102,189,99)', 'rgb(166,217,106)', 'rgb(217,239,139)',
              'rgb(254,224,139)']
-db = load_schema('molecules', password='stock_db', port=5432, host='localhost', user='postgres')
+
+
 
 def svg2html(svg):
     return 'data:image/svg+xml;base64,' + encodebytes(svg.encode()).decode().replace('\n', '')
+
 
 def brutto(mol):
     return ''.join(f'{a}{n}' for a, n in
                  sorted(Counter(a.atomic_symbol for _, a in mol.atoms()).items()))
 
+with db_session:
+    if db.ModificationStamp.get(FileName='nothing', Time='never'):
+        pass
+    else:
+        ModificationStamp(FileName='nothing', Time='never')
 dash = Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts)
 dash.title = 'Stock_DB'
 dash.layout = get_layout(dash)
@@ -108,6 +117,7 @@ def search(mrv, button, radio1, radio2, radio3, input1):
                     m = Molecule.find_similar(s)
                     if m is not None:
                         m = m.molecules()
+
                     else:
                         m = None
                 elif radio3 == 'EX':
@@ -206,7 +216,7 @@ def display_confirm(value):
     return False
 
 
-@dash.callback(Output('output-data-upload', 'children'),
+@dash.callback([Output('output-data-upload', 'children'), Output('update', 'children')],
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename'),
                State('upload-data', 'last_modified')])
@@ -214,7 +224,19 @@ def update_output(content, name, date):
     if content is not None:
         children = [
             parse_contents(content, name, date)]
-        return children
+        with db_session:
+            ModificationStamp(FileName=str(name), Time=str(int(time.time())+ 9*60*60))
+        update = "Last update with file {} uploaded at {}".format(name, time.ctime(time.time()+ 9 *60*60))
+        return children, update
+    else:
+        with db_session:
+            res = select((x.id, x.FileName, x.Time) for x in ModificationStamp).order_by(-1).first()
+            name = res[1]
+            date = res[2]
+            print(date)
+        update = "Last update with file {} uploaded at {}".format(name, time.ctime(int(date)) if date != 'never' else date)
+        return '', update
+
 
 @dash.server.route('/pictures/<name_id>')
 def get_picture(name_id):
@@ -232,6 +254,16 @@ def db_config():
     db.cgrdb_init_session()
 
 def start(port=8008, host="0.0.0.0", debug=True):
+
     dash.run_server(port=port, host=host, debug=debug)
+
+@dash.server.route('/download')
+def download_csv():
+
+    return send_file(write_excel(),
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     attachment_filename='downloadFile.xlsx',
+                     as_attachment=True)
+
 
 __all__ = ['dash', 'start']

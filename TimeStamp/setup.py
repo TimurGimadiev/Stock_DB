@@ -26,7 +26,7 @@ version = '0.0.1'
 
 
 setup(
-    name='Stock_DB',
+    name='TimeStamp',
     version=version,
     packages=find_packages(),
     url='https://github.com/TimurGimadiev/Stock_DB',
@@ -34,7 +34,7 @@ setup(
     author='Dr. Timur Gimadiev',
     author_email='timur.gimadiev@gmail.com',
     python_requires='>=3.6.0',
-    install_requires=['CGRtools[MRV,clean2d]>=4.1,<4.2', 'CGRdb', 'dash', 'dash_marvinjs', 'CGRdbData', 'pandas'],
+    install_requires=[],
     long_description=(Path(__file__).parent / 'README.md').open().read(),
     classifiers=['Environment :: Plugins',
                  'Intended Audience :: Science/Research',

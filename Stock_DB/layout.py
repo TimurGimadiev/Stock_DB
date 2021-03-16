@@ -17,10 +17,14 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from dash_core_components import Input, RadioItems, ConfirmDialog, Upload, Loading
-from dash_html_components import Div, H1, Hr, H2, Button, Br, A
+from dash_html_components import Div, H1, Hr, H2, H4, Button, Br, A
 #from dash_bootstrap_components import Table
 from dash_marvinjs import DashMarvinJS
 from dash_table import DataTable
+from pony.orm import db_session, select, PrimaryKey, Required
+from CGRdb import load_schema, LazyEntityMeta
+from TimeStamp import ModificationStamp
+import time
 
 readme = '''
 # Readme
@@ -46,6 +50,10 @@ fields2 = [
         {'name': 'Old', 'id': 'Old'}]
 
 def get_layout(app):
+    with db_session:
+        res = select((x.id, x.FileName, x.Time) for x in ModificationStamp).order_by(-1).first()
+        name = res[1]
+        date = res[2]
     row_0 = Div([H2("Upload to Database (excel file)", style={'textAlign': 'left'}),
     Upload(
         id='upload-data',
@@ -72,6 +80,7 @@ def get_layout(app):
             type="default",
         ),
     ])
+
     row_1 = Div([
                 Div([
                     H2("Text input", style={'textAlign': 'left'}),
@@ -168,6 +177,7 @@ def get_layout(app):
 
 
 
-    layout = Div([H1("Chemicals Storage", style={'textAlign': 'center'}),row_0, Hr(),
+    layout = Div([H1("Chemicals Storage", style={'textAlign': 'center'}),
+                  H4("Last update with file {} uploaded at {}".format(name, time.ctime(int(date)) if date != 'never' else date), id="update", style={'textAlign': 'center'}), row_0, Hr(),
                   row_1, Hr(), row_2, Hr(), row_3, Hr(), row_4])
     return layout

@@ -1,20 +1,5 @@
-{"molecule": {
-  "min_length": 2,
-  "max_length": 6,
-  "version": "2017",
-  "fingerprint_size": 12,
-  "bits_active": 2,
-  "bits_count": 4
-},
-"reaction": {
-  "min_length": 2,
-  "max_length": 6,
-  "cgr_dynbonds": 1,
-  "version": "2017",
-  "fingerprint_size": 12,
-  "bits_active": 2,
-  "bits_count": 4
-  },
+{"molecule": {"number_bit_pairs": 4, "max_radius": 6, "min_radius": 1, "number_active_bits": 2, "length": 2048},
+ "reaction": {"number_bit_pairs": 4, "max_radius": 6, "min_radius": 1, "number_active_bits": 2, "length": 2048},
   "cache_size": 1024,
-  "packages": ["CGRdbData"]
+  "packages": ["CGRdbData","TimeStamp"]
 }
